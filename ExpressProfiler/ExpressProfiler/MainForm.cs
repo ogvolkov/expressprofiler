@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -29,7 +30,7 @@ namespace ExpressProfiler
 
         public class PerfColumn
         {
-            public string  Caption;
+            public string Caption;
             public int Column;
             public int Width;
             public string Format;
@@ -39,18 +40,18 @@ namespace ExpressProfiler
         private enum ProfilingStateEnum { psStopped, psProfiling, psPaused }
         private RawTraceReader m_Rdr;
 
-        private readonly  YukonLexer m_Lex = new YukonLexer();
+        private readonly YukonLexer m_Lex = new YukonLexer();
         private SqlConnection m_Conn;
         private readonly SqlCommand m_Cmd = new SqlCommand();
         private Thread m_Thr;
         private bool m_NeedStop = true;
-        private ProfilingStateEnum m_ProfilingState ;
+        private ProfilingStateEnum m_ProfilingState;
         private int m_EventCount;
         private readonly ProfilerEvent m_EventStarted = new ProfilerEvent();
         private readonly ProfilerEvent m_EventStopped = new ProfilerEvent();
         private readonly ProfilerEvent m_EventPaused = new ProfilerEvent();
         internal readonly List<ListViewItem> m_Cached = new List<ListViewItem>(1024);
-        private readonly Dictionary<string,ListViewItem> m_itembysql = new Dictionary<string, ListViewItem>();
+        private readonly Dictionary<string, ListViewItem> m_itembysql = new Dictionary<string, ListViewItem>();
         private string m_servername = "";
         private string m_username = "";
         private string m_userpassword = "";
@@ -82,8 +83,8 @@ namespace ExpressProfiler
             edServer.Text = m_servername;
             edUser.Text = m_username;
             edPassword.Text = m_userpassword;
-            tbAuth.SelectedIndex = String.IsNullOrEmpty(m_username)?0:1;
-            if(m_autostart) RunProfiling(false);
+            tbAuth.SelectedIndex = String.IsNullOrEmpty(m_username) ? 0 : 1;
+            if (m_autostart) RunProfiling(false);
             UpdateButtons();
         }
 
@@ -95,12 +96,12 @@ namespace ExpressProfiler
                 using (StringReader sr = new StringReader(Properties.Settings.Default.TraceSettings))
                 {
                     return (TraceProperties.TraceSettings)x.Deserialize(sr);
-                    
+
                 }
             }
             catch (Exception)
             {
-                
+
             }
             return TraceProperties.TraceSettings.GetDefaultSettings();
         }
@@ -134,7 +135,7 @@ namespace ExpressProfiler
                     case "-maxevents":
                         int m;
                         if (!Int32.TryParse(ep, out m)) m = 1000;
-                            m_currentsettings.Filters.MaximumEventCount = m;
+                        m_currentsettings.Filters.MaximumEventCount = m;
                         break;
                     case "-d":
                     case "-duration":
@@ -173,7 +174,7 @@ namespace ExpressProfiler
                     case "-spstmtstarting":
                         m_currentsettings.EventsColumns.SPStmtStarting = true;
                         break;
-                       
+
                 }
                 i++;
             }
@@ -185,7 +186,7 @@ namespace ExpressProfiler
 
 
         }
-    
+
         private void tbStart_Click(object sender, EventArgs e)
         {
 
@@ -201,20 +202,20 @@ namespace ExpressProfiler
 
         private void UpdateButtons()
         {
-            tbStart.Enabled = m_ProfilingState==ProfilingStateEnum.psStopped||m_ProfilingState==ProfilingStateEnum.psPaused;
+            tbStart.Enabled = m_ProfilingState == ProfilingStateEnum.psStopped || m_ProfilingState == ProfilingStateEnum.psPaused;
             tbRun.Enabled = tbStart.Enabled;
             mnRun.Enabled = tbRun.Enabled;
-            tbRunWithFilters.Enabled = ProfilingStateEnum.psStopped==m_ProfilingState;
+            tbRunWithFilters.Enabled = ProfilingStateEnum.psStopped == m_ProfilingState;
             mnRunWithFilters.Enabled = tbRunWithFilters.Enabled;
             startTraceToolStripMenuItem.Enabled = tbStart.Enabled;
-            tbStop.Enabled = m_ProfilingState==ProfilingStateEnum.psPaused||m_ProfilingState==ProfilingStateEnum.psProfiling;
+            tbStop.Enabled = m_ProfilingState == ProfilingStateEnum.psPaused || m_ProfilingState == ProfilingStateEnum.psProfiling;
             stopTraceToolStripMenuItem.Enabled = tbStop.Enabled;
             tbPause.Enabled = m_ProfilingState == ProfilingStateEnum.psProfiling;
             pauseTraceToolStripMenuItem.Enabled = tbPause.Enabled;
             timer1.Enabled = m_ProfilingState == ProfilingStateEnum.psProfiling;
             edServer.Enabled = m_ProfilingState == ProfilingStateEnum.psStopped;
             tbAuth.Enabled = m_ProfilingState == ProfilingStateEnum.psStopped;
-            edUser.Enabled = edServer.Enabled&&(tbAuth.SelectedIndex==1);
+            edUser.Enabled = edServer.Enabled && (tbAuth.SelectedIndex == 1);
             edPassword.Enabled = edServer.Enabled && (tbAuth.SelectedIndex == 1);
         }
 
@@ -253,8 +254,8 @@ namespace ExpressProfiler
         private void InitColumns()
         {
             m_columns.Clear();
-            m_columns.Add(new PerfColumn{ Caption = "Event Class", Column = ProfilerEventColumns.EventClass,Width = 122});
-            m_columns.Add(new PerfColumn { Caption = "Text Data", Column = ProfilerEventColumns.TextData, Width = 255});
+            m_columns.Add(new PerfColumn { Caption = "Event Class", Column = ProfilerEventColumns.EventClass, Width = 122 });
+            m_columns.Add(new PerfColumn { Caption = "Text Data", Column = ProfilerEventColumns.TextData, Width = 255 });
             m_columns.Add(new PerfColumn { Caption = "Login Name", Column = ProfilerEventColumns.LoginName, Width = 79 });
             m_columns.Add(new PerfColumn { Caption = "CPU", Column = ProfilerEventColumns.CPU, Width = 82, Alignment = HorizontalAlignment.Right, Format = "#,0" });
             m_columns.Add(new PerfColumn { Caption = "Reads", Column = ProfilerEventColumns.Reads, Width = 78, Alignment = HorizontalAlignment.Right, Format = "#,0" });
@@ -268,7 +269,7 @@ namespace ExpressProfiler
             if (m_currentsettings.EventsColumns.ObjectName) m_columns.Add(new PerfColumn { Caption = "Object name", Column = ProfilerEventColumns.ObjectName, Width = 70 });
             if (m_currentsettings.EventsColumns.ApplicationName) m_columns.Add(new PerfColumn { Caption = "Application name", Column = ProfilerEventColumns.ApplicationName, Width = 70 });
 
-            m_columns.Add(new PerfColumn { Caption = "#", Column = -1, Width = 53, Alignment = HorizontalAlignment.Right});
+            m_columns.Add(new PerfColumn { Caption = "#", Column = -1, Width = 53, Alignment = HorizontalAlignment.Right });
         }
 
         private void InitGridColumns()
@@ -322,23 +323,23 @@ namespace ExpressProfiler
             return ProfilerEvents.Names[evt.EventClass];
         }
 
-        private string GetFormattedValue(ProfilerEvent evt,int column,string format)
+        private string GetFormattedValue(ProfilerEvent evt, int column, string format)
         {
-            return ProfilerEventColumns.Duration == column ? (evt.Duration / 1000).ToString(format) : evt.GetFormattedData(column,format);
+            return ProfilerEventColumns.Duration == column ? (evt.Duration / 1000).ToString(format) : evt.GetFormattedData(column, format);
         }
 
-        private void NewEventArrived(ProfilerEvent evt,bool last)
+        private void NewEventArrived(ProfilerEvent evt, bool last)
         {
             {
                 ListViewItem current = (lvEvents.SelectedIndices.Count > 0) ? m_Cached[lvEvents.SelectedIndices[0]] : null;
                 m_EventCount++;
                 string caption = GetEventCaption(evt);
                 ListViewItem lvi = new ListViewItem(caption);
-                string []items = new string[m_columns.Count];
-                for (int i = 1; i < m_columns.Count;i++ )
+                string[] items = new string[m_columns.Count];
+                for (int i = 1; i < m_columns.Count; i++)
                 {
                     PerfColumn pc = m_columns[i];
-                    items[i - 1] = pc.Column == -1 ? m_EventCount.ToString("#,0") : GetFormattedValue(evt,pc.Column, pc.Format) ?? "";
+                    items[i - 1] = pc.Column == -1 ? m_EventCount.ToString("#,0") : GetFormattedValue(evt, pc.Column, pc.Format) ?? "";
                 }
                 lvi.SubItems.AddRange(items);
                 lvi.Tag = evt;
@@ -353,7 +354,7 @@ namespace ExpressProfiler
             }
         }
 
-        internal void FocusLVI(ListViewItem lvi,bool ensure)
+        internal void FocusLVI(ListViewItem lvi, bool ensure)
         {
             if (null != lvi)
             {
@@ -395,12 +396,12 @@ namespace ExpressProfiler
             }
         }
 
-        private  SqlConnection GetConnection()
+        private SqlConnection GetConnection()
         {
             return new SqlConnection
                        {
                            ConnectionString =
-                           tbAuth.SelectedIndex==0?String.Format(@"Data Source = {0}; Initial Catalog = master; Integrated Security=SSPI;Application Name=Express Profiler",edServer.Text)
+                           tbAuth.SelectedIndex == 0 ? String.Format(@"Data Source = {0}; Initial Catalog = master; Integrated Security=SSPI;Application Name=Express Profiler", edServer.Text)
                            : String.Format(@"Data Source={0};Initial Catalog=master;User Id={1};Password='{2}';;Application Name=Express Profiler", edServer.Text, edUser.Text, edPassword.Text)
                        };
         }
@@ -600,17 +601,17 @@ namespace ExpressProfiler
 
                 if (null != m_currentsettings.Filters.Duration)
                 {
-                    SetIntFilter(m_currentsettings.Filters.Duration*1000,
+                    SetIntFilter(m_currentsettings.Filters.Duration * 1000,
                                  m_currentsettings.Filters.DurationFilterCondition, ProfilerEventColumns.Duration);
                 }
-                SetIntFilter(m_currentsettings.Filters.Reads, m_currentsettings.Filters.ReadsFilterCondition,ProfilerEventColumns.Reads);
-                SetIntFilter(m_currentsettings.Filters.Writes, m_currentsettings.Filters.WritesFilterCondition,ProfilerEventColumns.Writes);
-                SetIntFilter(m_currentsettings.Filters.CPU, m_currentsettings.Filters.CpuFilterCondition,ProfilerEventColumns.CPU);
+                SetIntFilter(m_currentsettings.Filters.Reads, m_currentsettings.Filters.ReadsFilterCondition, ProfilerEventColumns.Reads);
+                SetIntFilter(m_currentsettings.Filters.Writes, m_currentsettings.Filters.WritesFilterCondition, ProfilerEventColumns.Writes);
+                SetIntFilter(m_currentsettings.Filters.CPU, m_currentsettings.Filters.CpuFilterCondition, ProfilerEventColumns.CPU);
                 SetIntFilter(m_currentsettings.Filters.SPID, m_currentsettings.Filters.SPIDFilterCondition, ProfilerEventColumns.SPID);
 
-                SetStringFilter(m_currentsettings.Filters.LoginName, m_currentsettings.Filters.LoginNameFilterCondition,ProfilerEventColumns.LoginName);
-                SetStringFilter(m_currentsettings.Filters.DatabaseName,m_currentsettings.Filters.DatabaseNameFilterCondition, ProfilerEventColumns.DatabaseName);
-                SetStringFilter(m_currentsettings.Filters.TextData, m_currentsettings.Filters.TextDataFilterCondition,ProfilerEventColumns.TextData);
+                SetStringFilter(m_currentsettings.Filters.LoginName, m_currentsettings.Filters.LoginNameFilterCondition, ProfilerEventColumns.LoginName);
+                SetStringFilter(m_currentsettings.Filters.DatabaseName, m_currentsettings.Filters.DatabaseNameFilterCondition, ProfilerEventColumns.DatabaseName);
+                SetStringFilter(m_currentsettings.Filters.TextData, m_currentsettings.Filters.TextDataFilterCondition, ProfilerEventColumns.TextData);
                 SetStringFilter(m_currentsettings.Filters.ApplicationName, m_currentsettings.Filters.ApplicationNameFilterCondition, ProfilerEventColumns.ApplicationName);
 
 
@@ -643,7 +644,7 @@ namespace ExpressProfiler
 
         private void SetIntFilter(int? value, TraceProperties.IntFilterCondition condition, int column)
         {
-            int[] com = new[] { ComparisonOperators.Equal, ComparisonOperators.NotEqual, ComparisonOperators.GreaterThan, ComparisonOperators.LessThan};
+            int[] com = new[] { ComparisonOperators.Equal, ComparisonOperators.NotEqual, ComparisonOperators.GreaterThan, ComparisonOperators.LessThan };
             if ((null != value))
             {
                 long? v = value;
@@ -651,7 +652,7 @@ namespace ExpressProfiler
             }
         }
 
-        private void SetStringFilter(string value,TraceProperties.StringFilterCondition condition,int column)
+        private void SetStringFilter(string value, TraceProperties.StringFilterCondition condition, int column)
         {
             if (!String.IsNullOrEmpty(value))
             {
@@ -664,16 +665,16 @@ namespace ExpressProfiler
         }
 
         private void StartProfilerThread()
-        { 
-            if(m_Rdr!=null)
+        {
+            if (m_Rdr != null)
             {
                 m_Rdr.Close();
             }
             m_Rdr.StartTrace();
-            m_Thr = new Thread(ProfilerThread) {IsBackground = true, Priority = ThreadPriority.Lowest};
+            m_Thr = new Thread(ProfilerThread) { IsBackground = true, Priority = ThreadPriority.Lowest };
             m_NeedStop = false;
             m_ProfilingState = ProfilingStateEnum.psProfiling;
-            NewEventArrived(m_EventStarted,true);
+            NewEventArrived(m_EventStarted, true);
             m_Thr.Start();
         }
 
@@ -705,7 +706,7 @@ namespace ExpressProfiler
             }
             m_Thr.Join();
             m_ProfilingState = ProfilingStateEnum.psStopped;
-            NewEventArrived(m_EventStopped,true);
+            NewEventArrived(m_EventStopped, true);
             UpdateButtons();
         }
 
@@ -727,15 +728,155 @@ namespace ExpressProfiler
                     sb.AppendFormat("{0}\r\ngo\r\n", lv.SubItems[1].Text);
                 }
             }
-            m_Lex.FillRichEdit(reTextData, sb.ToString());
+
+            var commandText = sb.ToString();
+            var tokenizedText = new List<Token>(m_Lex.Tokenize(commandText));
+            FillRichEdit(reTextData, tokenizedText);
+
+            IEnumerable<Token> textForBeautification;
+            var extractedText = TryExtractSpExecuteSql(tokenizedText);
+            if (extractedText != null)
+            {
+                textForBeautification = m_Lex.Tokenize(extractedText);
+            }
+            else
+            {
+                textForBeautification = tokenizedText;
+            }
+
+            var beautifiedText = Beautify(textForBeautification);
+            FillRichEdit(beautifiedSqlText, beautifiedText);
         }
+
+
+        public IEnumerable<Token> Beautify(IEnumerable<Token> tokens)
+        {
+            var keywordsToStartNewLine = new List<string> { "FROM", "LEFT", "RIGHT", "WHERE" };
+            var joinPrefixes = new List<string> {"LEFT", "RIGHT", "OUTER"};
+            bool lastKeywordIsJoinPrefix = false;
+
+            foreach (var token in tokens)
+            {
+                switch (token.Kind)
+                {
+                    case YukonLexer.TokenKind.tkKey:
+                    case YukonLexer.TokenKind.tkFuKeyword:
+                    case YukonLexer.TokenKind.tkGreyKeyword:
+                        var normalizedKeyword = token.Text.ToUpperInvariant();
+
+                        if ( keywordsToStartNewLine.Contains(normalizedKeyword)
+                            || (normalizedKeyword == "JOIN" && !lastKeywordIsJoinPrefix) )
+                        {
+                            yield return new Token(YukonLexer.TokenKind.tkSpace, "\n");                         
+                        }                        
+                        lastKeywordIsJoinPrefix = joinPrefixes.Contains(normalizedKeyword);
+                        yield return new Token(token.Kind, normalizedKeyword);
+                        break;
+                    default:
+                        yield return token;                        
+                        break;
+                }                        
+            }
+        }
+
+        private enum SpExecuteSqlExtractionMode { Searching, ExecFound, SpExecuteSqlFound }
+
+        private string TryExtractSpExecuteSql(List<Token> tokens)
+        {
+            var currentMode = SpExecuteSqlExtractionMode.Searching;
+            foreach (var token in tokens)
+            {
+                switch (currentMode)
+                {
+                    case SpExecuteSqlExtractionMode.Searching:
+                        if (token.Text == "exec")
+                        {
+                            currentMode = SpExecuteSqlExtractionMode.ExecFound;
+                        }
+                        break;
+                    case SpExecuteSqlExtractionMode.ExecFound:
+                        if (token.Text == "sp_executesql")
+                        {
+                            currentMode = SpExecuteSqlExtractionMode.SpExecuteSqlFound;
+                        }
+                        break;
+                    case SpExecuteSqlExtractionMode.SpExecuteSqlFound:
+                        if (token.Kind == YukonLexer.TokenKind.tkString)
+                        {
+                            return Unquote(token.Text);
+                        }
+                        break;
+                }
+            }
+
+            return null;
+        }
+
+        private string Unquote(string text)
+        {
+            var result = new StringBuilder();
+            bool awaitingQuote = false;
+            for (int i = 0; i < text.Length; i++)
+            {
+                var character = text[i];
+
+                if (character != '\'' || awaitingQuote)
+                {
+                    result.Append(character);
+                    awaitingQuote = false;
+                }
+                else
+                {
+                    awaitingQuote = true;
+                }
+            }
+
+            return result.ToString();
+        }
+
+        private void FillRichEdit(System.Windows.Forms.RichTextBox rich, IEnumerable<Token> tokens)
+        {
+            rich.Text = "";
+
+            RTFBuilder sb = new RTFBuilder { BackColor = rich.BackColor };
+
+            foreach (var token in tokens)
+            {
+                Color forecolor;
+                switch (token.Kind)
+                {
+                    case YukonLexer.TokenKind.tkKey: forecolor = Color.Blue;
+                        break;
+                    case YukonLexer.TokenKind.tkFunction: forecolor = Color.Fuchsia; break;
+                    case YukonLexer.TokenKind.tkGreyKeyword: forecolor = Color.Gray; break;
+                    case YukonLexer.TokenKind.tkFuKeyword: forecolor = Color.Fuchsia; break;
+                    case YukonLexer.TokenKind.tkDatatype: forecolor = Color.Blue; break;
+                    case YukonLexer.TokenKind.tkNumber: forecolor = Color.Red; break;
+                    case YukonLexer.TokenKind.tkString: forecolor = Color.Red; break;
+                    case YukonLexer.TokenKind.tkComment: forecolor = Color.DarkGreen;
+                        break;
+                    default: forecolor = Color.Black; break;
+                }
+                sb.ForeColor = forecolor;
+                if (token.Text == Environment.NewLine || token.Text == "\r" || token.Text == "\n")
+                {
+                    sb.AppendLine();
+                }
+                else
+                {
+                    sb.Append(token.Text);
+                }
+            }
+            rich.Rtf = sb.ToString();
+        }
+
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if(m_ProfilingState==ProfilingStateEnum.psPaused||m_ProfilingState==ProfilingStateEnum.psProfiling)
+            if (m_ProfilingState == ProfilingStateEnum.psPaused || m_ProfilingState == ProfilingStateEnum.psProfiling)
             {
-                if (MessageBox.Show("There are traces still running. Are you sure you want to close the application?","ExpressProfiler",MessageBoxButtons.YesNo,MessageBoxIcon.Question
-                    ,MessageBoxDefaultButton.Button1) == DialogResult.Yes)
+                if (MessageBox.Show("There are traces still running. Are you sure you want to close the application?", "ExpressProfiler", MessageBoxButtons.YesNo, MessageBoxIcon.Question
+                    , MessageBoxDefaultButton.Button1) == DialogResult.Yes)
                 {
                     StopProfiling();
                 }
@@ -765,7 +906,7 @@ namespace ExpressProfiler
                 cn.Close();
             }
             m_ProfilingState = ProfilingStateEnum.psPaused;
-            NewEventArrived(m_EventPaused,true);
+            NewEventArrived(m_EventPaused, true);
             UpdateButtons();
         }
 
@@ -839,7 +980,7 @@ namespace ExpressProfiler
 
                 if ((null == m_prev) || (DateTime.Now.Subtract(m_prev.m_date).TotalSeconds >= 1))
                 {
-                    PerfInfo curr = new PerfInfo {m_count = m_EventCount};
+                    PerfInfo curr = new PerfInfo { m_count = m_EventCount };
                     if (m_perf.Count >= 60)
                     {
                         m_first = m_perf.Dequeue();
@@ -851,8 +992,8 @@ namespace ExpressProfiler
                     double d1 = now.Subtract(m_prev.m_date).TotalSeconds;
                     double d2 = now.Subtract(m_first.m_date).TotalSeconds;
                     slEPS.Text = String.Format("{0} / {1} EPS(last/avg for {2} second(s))",
-                        (Math.Abs(d1 - 0) > 0.001 ? ((curr.m_count - m_prev.m_count)/d1).ToString("#,0.00") : ""),
-                                 (Math.Abs(d2 - 0) > 0.001 ? ((curr.m_count - m_first.m_count) / d2).ToString("#,0.00") : ""), d2 .ToString("0"));
+                        (Math.Abs(d1 - 0) > 0.001 ? ((curr.m_count - m_prev.m_count) / d1).ToString("#,0.00") : ""),
+                                 (Math.Abs(d2 - 0) > 0.001 ? ((curr.m_count - m_first.m_count) / d2).ToString("#,0.00") : ""), d2.ToString("0"));
 
                     m_perf.Enqueue(curr);
                     m_prev = curr;
@@ -926,7 +1067,7 @@ namespace ExpressProfiler
             doc.PreserveWhitespace = true;
             using (StringWriter writer = new StringWriter())
             {
-                XmlTextWriter textWriter = new XmlTextWriter(writer) {Formatting = Formatting.Indented};
+                XmlTextWriter textWriter = new XmlTextWriter(writer) { Formatting = Formatting.Indented };
                 doc.Save(textWriter);
                 Clipboard.SetText(writer.ToString());
             }
@@ -1003,20 +1144,20 @@ namespace ExpressProfiler
 
         private void selectAllToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            if (lvEvents.Focused && (m_ProfilingState!=ProfilingStateEnum.psProfiling))
+            if (lvEvents.Focused && (m_ProfilingState != ProfilingStateEnum.psProfiling))
             {
                 SelectAllEvents(true);
             }
             else
-            if (reTextData.Focused)
-            {
-                reTextData.SelectAll();
-            }
+                if (reTextData.Focused)
+                {
+                    reTextData.SelectAll();
+                }
         }
 
         internal void PerformFind(bool forwards)
         {
-            if(String.IsNullOrEmpty(lastpattern)) return;
+            if (String.IsNullOrEmpty(lastpattern)) return;
 
             if (forwards)
             {
@@ -1044,7 +1185,7 @@ namespace ExpressProfiler
         private bool FindText(int i)
         {
             ListViewItem lvi = m_Cached[i];
-            ProfilerEvent evt = (ProfilerEvent) lvi.Tag;
+            ProfilerEvent evt = (ProfilerEvent)lvi.Tag;
             string pattern = (wholeWord ? "\\b" + lastpattern + "\\b" : lastpattern);
             if (Regex.IsMatch(evt.TextData, pattern, (matchCase ? RegexOptions.None : RegexOptions.IgnoreCase)))
             {
@@ -1104,18 +1245,18 @@ namespace ExpressProfiler
 
             XmlDocument doc = new XmlDocument();
             XmlProcessingInstruction pi = doc.CreateProcessingInstruction("mso-application", "progid='Excel.Sheet'");
-            doc.AppendChild(pi); 
+            doc.AppendChild(pi);
             const string urn = "urn:schemas-microsoft-com:office:spreadsheet";
-            XmlNode root = doc.CreateElement("ss","Workbook",urn);
+            XmlNode root = doc.CreateElement("ss", "Workbook", urn);
             NewAttribute(root, "xmlns:ss", urn);
             doc.AppendChild(root);
 
-            XmlNode styles = doc.CreateElement("ss","Styles", urn);
+            XmlNode styles = doc.CreateElement("ss", "Styles", urn);
             root.AppendChild(styles);
-            XmlNode style = doc.CreateElement("ss","Style", urn);
+            XmlNode style = doc.CreateElement("ss", "Style", urn);
             styles.AppendChild(style);
-            NewAttribute(style,"ID","s62",urn);
-            XmlNode font = doc.CreateElement("ss","Font",urn);
+            NewAttribute(style, "ID", "s62", urn);
+            XmlNode font = doc.CreateElement("ss", "Font", urn);
             style.AppendChild(font);
             NewAttribute(font, "Bold", "1", urn);
 
@@ -1125,26 +1266,26 @@ namespace ExpressProfiler
             NewAttribute(worksheet, "Name", "Sql Trace", urn);
             XmlNode table = doc.CreateElement("ss", "Table", urn);
             worksheet.AppendChild(table);
-            NewAttribute(table, "ExpandedColumnCount",m_columns.Count.ToString(CultureInfo.InvariantCulture),urn);
+            NewAttribute(table, "ExpandedColumnCount", m_columns.Count.ToString(CultureInfo.InvariantCulture), urn);
 
             foreach (ColumnHeader lv in lvEvents.Columns)
             {
-                XmlNode r = doc.CreateElement("ss","Column", urn);
-                NewAttribute(r, "AutoFitWidth","0",urn);
+                XmlNode r = doc.CreateElement("ss", "Column", urn);
+                NewAttribute(r, "AutoFitWidth", "0", urn);
                 NewAttribute(r, "Width", lv.Width.ToString(CultureInfo.InvariantCulture), urn);
                 table.AppendChild(r);
             }
 
-            XmlNode row = doc.CreateElement("ss","Row", urn);
+            XmlNode row = doc.CreateElement("ss", "Row", urn);
             table.AppendChild(row);
             foreach (ColumnHeader lv in lvEvents.Columns)
             {
-                XmlNode cell = doc.CreateElement("ss","Cell", urn);
+                XmlNode cell = doc.CreateElement("ss", "Cell", urn);
                 row.AppendChild(cell);
-                NewAttribute(cell, "StyleID","s62",urn);
-                XmlNode data = doc.CreateElement("ss","Data", urn);
+                NewAttribute(cell, "StyleID", "s62", urn);
+                XmlNode data = doc.CreateElement("ss", "Data", urn);
                 cell.AppendChild(data);
-                NewAttribute(data, "Type","String",urn);
+                NewAttribute(data, "Type", "String", urn);
                 data.InnerText = lv.Text;
             }
 
@@ -1157,46 +1298,46 @@ namespace ExpressProfiler
                     for (int i = 0; i < m_columns.Count; i++)
                     {
                         PerfColumn pc = m_columns[i];
-                        if(pc.Column!=-1)
+                        if (pc.Column != -1)
                         {
-                        XmlNode cell = doc.CreateElement("ss", "Cell", urn);
-                        row.AppendChild(cell);
-                        XmlNode data = doc.CreateElement("ss", "Data", urn);
-                        cell.AppendChild(data);
+                            XmlNode cell = doc.CreateElement("ss", "Cell", urn);
+                            row.AppendChild(cell);
+                            XmlNode data = doc.CreateElement("ss", "Data", urn);
+                            cell.AppendChild(data);
                             string dataType;
                             switch (ProfilerEventColumns.ProfilerColumnDataTypes[pc.Column])
                             {
-                                    case ProfilerColumnDataType.Int:
-                                    case ProfilerColumnDataType.Long:
-                                        dataType = "Number";
+                                case ProfilerColumnDataType.Int:
+                                case ProfilerColumnDataType.Long:
+                                    dataType = "Number";
                                     break;
-                                    case ProfilerColumnDataType.DateTime:
-                                        dataType = "String";
+                                case ProfilerColumnDataType.DateTime:
+                                    dataType = "String";
                                     break;
                                 default:
-                                        dataType = "String";
+                                    dataType = "String";
                                     break;
                             }
-                        if (ProfilerEventColumns.EventClass == pc.Column) dataType = "String";
-                        NewAttribute(data, "Type", dataType, urn);
-                        if (ProfilerEventColumns.EventClass == pc.Column)
-                        {
-                            data.InnerText = GetEventCaption(((ProfilerEvent) (lvi.Tag)));
-                        }
-                        else
-                        {
-                            data.InnerText = pc.Column == -1
-                                                 ? ""
-                                                 : GetFormattedValue((ProfilerEvent)(lvi.Tag),pc.Column,ProfilerEventColumns.ProfilerColumnDataTypes[pc.Column]==ProfilerColumnDataType.DateTime?pc.Format:"") ??
-                                                   "";
-                        }
+                            if (ProfilerEventColumns.EventClass == pc.Column) dataType = "String";
+                            NewAttribute(data, "Type", dataType, urn);
+                            if (ProfilerEventColumns.EventClass == pc.Column)
+                            {
+                                data.InnerText = GetEventCaption(((ProfilerEvent)(lvi.Tag)));
                             }
+                            else
+                            {
+                                data.InnerText = pc.Column == -1
+                                                     ? ""
+                                                     : GetFormattedValue((ProfilerEvent)(lvi.Tag), pc.Column, ProfilerEventColumns.ProfilerColumnDataTypes[pc.Column] == ProfilerColumnDataType.DateTime ? pc.Format : "") ??
+                                                       "";
+                            }
+                        }
                     }
                 }
             }
             using (StringWriter writer = new StringWriter())
             {
-                XmlTextWriter textWriter = new XmlTextWriter(writer) { Formatting = Formatting.Indented,Namespaces = true};
+                XmlTextWriter textWriter = new XmlTextWriter(writer) { Formatting = Formatting.Indented, Namespaces = true };
                 doc.Save(textWriter);
                 string xml = writer.ToString();
                 MemoryStream xmlStream = new MemoryStream();
@@ -1210,7 +1351,7 @@ namespace ExpressProfiler
 
         private void mnAbout_Click(object sender, EventArgs e)
         {
-            MessageBox.Show(versionString+"\nhttps://expressprofiler.codeplex.com/", "About", MessageBoxButtons.OK,
+            MessageBox.Show(versionString + "\nhttps://expressprofiler.codeplex.com/", "About", MessageBoxButtons.OK,
                             MessageBoxIcon.Information);
         }
 
@@ -1248,7 +1389,7 @@ namespace ExpressProfiler
 
         private void deleteSelectedToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            for (int i = lvEvents.SelectedIndices.Count-1; i >= 0; i--)
+            for (int i = lvEvents.SelectedIndices.Count - 1; i >= 0; i--)
             {
                 m_Cached.RemoveAt(lvEvents.SelectedIndices[i]);
             }

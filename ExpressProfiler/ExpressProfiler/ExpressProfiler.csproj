@@ -91,6 +91,7 @@
     <Compile Include="RawTraceReader.cs" />
     <Compile Include="RtfBuilder.cs" />
     <Compile Include="SqlTokens.cs" />
+    <Compile Include="Token.cs" />
     <Compile Include="TraceProperties.cs">
       <SubType>Form</SubType>
     </Compile>

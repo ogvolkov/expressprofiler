@@ -1,6 +1,8 @@
 ﻿//Traceutils assembly
 //writen by Locky, 2009.
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Text;
 
@@ -57,42 +59,16 @@ namespace ExpressProfiler
             return result.ToString();
         }
         public YukonLexer() { Array.Sort(m_IdentifiersArray); }
-        public void FillRichEdit(System. Windows.Forms.RichTextBox rich, string value)
-        {
 
-            rich.Text = "";
+        public IEnumerable<Token> Tokenize(string value)
+        {
             Line = value;
 
-            RTFBuilder sb = new RTFBuilder { BackColor = rich.BackColor };
             while (TokenId != TokenKind.tkNull)
             {
-                Color forecolor;
-                switch (TokenId)
-                {
-                    case TokenKind.tkKey: forecolor = Color.Blue;
-                        break;
-                    case TokenKind.tkFunction: forecolor = Color.Fuchsia; break;
-                    case TokenKind.tkGreyKeyword: forecolor = Color.Gray; break;
-                    case TokenKind.tkFuKeyword: forecolor = Color.Fuchsia; break;
-                    case TokenKind.tkDatatype: forecolor = Color.Blue; break;
-                    case TokenKind.tkNumber: forecolor = Color.Red; break;
-                    case TokenKind.tkString: forecolor = Color.Red; break;
-                    case TokenKind.tkComment: forecolor = Color.DarkGreen;
-                        break;
-                    default: forecolor = Color.Black; break;
-                }
-                sb.ForeColor = forecolor;
-                if (Token == Environment.NewLine || Token == "\r" || Token == "\n")
-                {
-                    sb.AppendLine();
-                }
-                else
-                {
-                    sb.Append(Token);
-                }
+                yield return new Token(TokenId, Token);                
                 Next();
-            }
-            rich.Rtf = sb.ToString();
+            }            
         }
 
         private string Line
